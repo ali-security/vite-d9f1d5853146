@@ -15,6 +15,11 @@ permissions: {}
 
 on:
   workflow_dispatch:
+    inputs:
+      test-filter:
+        description: "Space separated vitest filename filters. Empty runs the full suite."
+        required: false
+        default: ""
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
@@ -83,13 +88,13 @@ jobs:
         run: pnpm run build
 
       - name: Test unit
-        run: pnpm run test-unit
+        run: pnpm run test-unit ${{ inputs.test-filter }}
 
       - name: Test serve
-        run: pnpm run test-serve
+        run: pnpm run test-serve ${{ inputs.test-filter }}
 
       - name: Test build
-        run: pnpm run test-build
+        run: pnpm run test-build ${{ inputs.test-filter }}
 
       - name: Pack
         if: matrix.os == 'ubuntu-latest' && matrix.node_version == 24
