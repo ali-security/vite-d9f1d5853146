@@ -29,17 +29,23 @@ test.runIf(isBuild)('rebuilds styles only entry on change', async () => {
 
   // We must use the file referenced in the manifest here,
   // since there'll be different versions of the file with different hashes.
-  const reRenderedCssFile = findAssetFile(
-    updatedManifest['style-only-entry.css']!.file.substring('assets/'.length),
-    'watch',
-  )
-  expect(reRenderedCssFile).toContain('#ffb6c1')
-  const reRenderedCssLegacyFile = findAssetFile(
-    updatedManifest['style-only-entry-legacy.css']!.file.substring(
-      'assets/'.length,
-    ),
-    'watch',
-  )
-  expect(reRenderedCssLegacyFile).toContain('#ffb6c1')
+  // The rebuilt assets aren't necessarily flushed to disk by the time the
+  // rebuild is reported as complete, so re-read the manifest and the asset it
+  // points at until the updated contents show up.
+  const readAssetFromManifest = (name: string) =>
+    findAssetFile(
+      readManifest('watch')[name]!.file.substring('assets/'.length),
+      'watch',
+    )
+  await expect
+    .poll(() => readAssetFromManifest('style-only-entry.css'), {
+      timeout: 10000,
+    })
+    .toContain('#ffb6c1')
+  await expect
+    .poll(() => readAssetFromManifest('style-only-entry-legacy.css'), {
+      timeout: 10000,
+    })
+    .toContain('#ffb6c1')
   expect(findAssetFile(/polyfills-legacy-.+\.js/, 'watch')).toBeTruthy()
 })

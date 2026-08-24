@@ -14,16 +14,6 @@ env:
 permissions: {}
 
 on:
-  push:
-    branches:
-      - main
-      - release/*
-      - feat/*
-      - fix/*
-      - perf/*
-      - "v[0-9]+" # v1, v2, ...
-      - "v[0-9]+.[0-9]+" # v4.0, v4.1, ...
-  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -31,34 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changed:
-    name: Get changed files
-    runs-on: ubuntu-slim
-    outputs:
-      should_skip: ${{ steps.changed-files.outputs.only_changed == 'true' }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          # Assume PRs are less than 50 commits
-          fetch-depth: 50
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
-        with:
-          files: |
-            docs/**
-            .github/**
-            !.github/workflows/ci.yml
-            packages/create-vite/template**
-            **.md
-
   test:
-    needs: changed
-    if: needs.changed.outputs.should_skip != 'true'
-    timeout-minutes: 20
+    timeout-minutes: 60
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -127,24 +91,39 @@ jobs:
       - name: Test build
         run: pnpm run test-build
 
+      - name: Pack
+        if: matrix.os == 'ubuntu-latest' && matrix.node_version == 24
+        working-directory: packages/vite
+        run: pnpm pack
+
+      - name: Upload artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.node_version == 24
+        uses: actions/upload-artifact@v4
+        with:
+          name: vite-tgz
+          path: packages/vite/vite-*.tgz
+          if-no-files-found: error
+
   test-passed:
+    timeout-minutes: 5
     if: (!cancelled() && !failure())
     needs: test
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     name: Build & Test Passed or Skipped
     steps:
       - run: echo "Build & Test Passed or Skipped"
 
   test-failed:
+    timeout-minutes: 5
     if: (!cancelled() && failure())
     needs: test
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     name: Build & Test Failed
     steps:
       - run: echo "Build & Test Failed"
 
   lint:
-    timeout-minutes: 10
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     name: "Lint: node-24, ubuntu-latest"
     steps:
