@@ -106,6 +106,7 @@ import { searchForPackageRoot, searchForWorkspaceRoot } from './searchRoot'
 import type { DevEnvironment } from './environment'
 import { hostValidationMiddleware } from './middlewares/hostCheck'
 import { rejectInvalidRequestMiddleware } from './middlewares/rejectInvalidRequest'
+import { openInEditorGuardMiddleware } from './middlewares/openInEditor'
 import { memoryFilesMiddleware } from './middlewares/memoryFiles'
 import { rejectNoCorsRequestMiddleware } from './middlewares/rejectNoCorsRequest'
 
@@ -971,6 +972,7 @@ export async function _createServer(
   }
 
   // open in editor support
+  middlewares.use('/__open-in-editor', openInEditorGuardMiddleware())
   middlewares.use('/__open-in-editor', launchEditorMiddleware())
 
   // ping request handler
